@@ -1,0 +1,8 @@
+{
+  "name": "rideshare-tracker-monorepo",
+  "private": true,
+  "workspaces": [
+    "server",
+    "mobile"
+  ]
+}
