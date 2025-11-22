@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { getDb } from '../db.js';
 import { requireToken } from '../auth.js';
+import { overlayEmitter } from './overlay.js';
 
 const StartRideSchema = z.object({
     shift_id: z.string().uuid()
@@ -68,6 +69,8 @@ export async function rideRoutes(fastify: FastifyInstance) {
             `INSERT INTO rides (id, shift_id, status, started_at, pickup_at)
              VALUES (?, ?, ?, ?, ?)`
         ).run(id, parsed.data.shift_id, 'in_progress', started_at, started_at);
+
+        overlayEmitter.emit('update');
 
         return { id, started_at };
     });
@@ -144,6 +147,8 @@ export async function rideRoutes(fastify: FastifyInstance) {
 
         runTransaction();
 
+        overlayEmitter.emit('update');
+
         return { id: params.data.id, ended_at, gross_cents: body.data.gross_cents };
     });
 
@@ -188,6 +193,8 @@ export async function rideRoutes(fastify: FastifyInstance) {
         });
 
         runTransaction();
+
+        overlayEmitter.emit('update');
 
         return { id: params.data.id, tip_cents: body.data.tip_cents };
     });

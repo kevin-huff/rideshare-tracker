@@ -3,6 +3,7 @@ import { getDb } from '../db.js';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { requireToken } from '../auth.js';
+import { overlayEmitter } from './overlay.js';
 
 const ShiftSchema = z.object({});
 const ShiftIdParams = z.object({
@@ -32,6 +33,8 @@ export async function shiftRoutes(fastify: FastifyInstance) {
 
         db.prepare('INSERT INTO shifts (id, started_at) VALUES (?, ?)').run(id, started_at);
 
+        overlayEmitter.emit('update');
+
         return { id, started_at };
     });
 
@@ -58,6 +61,8 @@ export async function shiftRoutes(fastify: FastifyInstance) {
 
         const ended_at = new Date().toISOString();
         db.prepare('UPDATE shifts SET ended_at = ? WHERE id = ?').run(ended_at, parsedParams.data.id);
+
+        overlayEmitter.emit('update');
 
         return { id: parsedParams.data.id, ended_at };
     });

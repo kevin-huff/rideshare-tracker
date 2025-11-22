@@ -1,18 +1,80 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+import { getDb } from '../db.js';
+import EventEmitter from 'events';
 
-const OverlayQuery = z.object({
-    channel: z.string().trim().min(1).default('demo'),
-    token: z.string().trim().optional()
-});
+function buildOverlayPayload() {
+    const db = getDb();
+    const shift = db
+        .prepare('SELECT * FROM shifts WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1')
+        .get();
 
-function escapeAttribute(value: string) {
-    return value.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (!shift) {
+        return { shiftActive: false };
+    }
+
+    const durationSeconds = Math.floor(
+        (Date.now() - new Date(shift.started_at).getTime()) / 1000
+    );
+    const totalEarningsCents = shift.earnings_cents + shift.tips_cents;
+    const ratePerHour =
+        durationSeconds > 0 ? (totalEarningsCents / 100) / (durationSeconds / 3600) : 0;
+
+    const lastRide = db
+        .prepare(
+            `SELECT * FROM rides
+             WHERE shift_id = ?
+             ORDER BY (ended_at IS NULL) DESC, ended_at DESC, started_at DESC
+             LIMIT 1`
+        )
+        .get(shift.id);
+
+    const pings = db
+        .prepare(
+            `SELECT lat, lng, ride_id FROM location_pings
+             WHERE shift_id = ?
+             ORDER BY ts ASC
+             LIMIT 500`
+        )
+        .all(shift.id);
+
+    return {
+        shiftActive: true,
+        metrics: {
+            rides: shift.ride_count,
+            earnings_cents: totalEarningsCents,
+            tips_cents: shift.tips_cents,
+            distance_miles: shift.distance_miles,
+            duration_seconds: durationSeconds,
+            rate_per_hour: ratePerHour
+        },
+        lastRide: lastRide
+            ? {
+                  id: lastRide.id,
+                  total_cents: (lastRide.gross_cents ?? 0) + (lastRide.tip_cents ?? 0),
+                  at: lastRide.ended_at ?? lastRide.started_at,
+                  pickup: lastRide.pickup_lat
+                      ? `${lastRide.pickup_lat.toFixed(4)}, ${lastRide.pickup_lng?.toFixed(4)}`
+                      : '—',
+                  dropoff: lastRide.dropoff_lat
+                      ? `${lastRide.dropoff_lat.toFixed(4)}, ${lastRide.dropoff_lng?.toFixed(4)}`
+                      : '—'
+              }
+            : null,
+        path: pings.map((p: any) => [p.lng, p.lat]),
+        markers: {
+            pickup: lastRide && lastRide.pickup_lat
+                ? { lng: lastRide.pickup_lng, lat: lastRide.pickup_lat }
+                : null,
+            dropoff: lastRide && lastRide.dropoff_lat
+                ? { lng: lastRide.dropoff_lng, lat: lastRide.dropoff_lat }
+                : null
+        }
+    };
 }
 
-function overlayHtml(channel: string, token?: string) {
-    const safeChannel = escapeAttribute(channel);
-    const safeToken = token ? escapeAttribute(token) : '';
+export const overlayEmitter = new EventEmitter();
+
+function overlayHtml() {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,6 +84,8 @@ function overlayHtml(channel: string, token?: string) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
   <style>
     :root {
       --glass: rgba(10,12,22,0.65);
@@ -171,9 +235,7 @@ function overlayHtml(channel: string, token?: string) {
     <div class="map" id="map"></div>
     <div class="hud">
       <div class="header">
-        <div class="pill">Channel <strong id="channel">${safeChannel}</strong></div>
         <div class="status" id="shift-status"><span class="pulse"></span> Shift Active</div>
-        <div class="pill">Token <strong id="token">${safeToken ? '••••••••' : 'none'}</strong></div>
       </div>
 
       <div class="grid">
@@ -184,7 +246,7 @@ function overlayHtml(channel: string, token?: string) {
         </div>
         <div class="card">
           <div class="label">Earnings</div>
-          <div class="metric" id="metric-earnings">$0<span class="sub">gross</span></div>
+          <div class="metric" id="metric-earnings">$0<span class="sub">incl tips</span></div>
           <div class="row">
             <span class="muted">Tips</span>
             <span class="muted" id="metric-tips">$0</span>
@@ -211,55 +273,168 @@ function overlayHtml(channel: string, token?: string) {
   </div>
 
   <script>
-    const state = {
-      channel: ${JSON.stringify(safeChannel)},
-      token: ${JSON.stringify(safeToken)},
-      data: {
-        rides: 3,
-        earnings: 12850,
-        tips: 2300,
-        ratePerHour: 32,
-        shiftDuration: '2h 15m',
-        lastRide: { total: 1825, at: '8:42 PM', pickup: 'Market St', dropoff: 'Sunset Ave' },
-        shiftActive: true
-      }
-    };
+    let map;
+    let mapReady = false;
+    let startMarker = null;
+    let endMarker = null;
 
     function formatCents(cents) {
       return '$' + (cents / 100).toFixed(2);
     }
 
     function render(data) {
-      document.getElementById('metric-rides').textContent = data.rides.toString();
-      document.getElementById('metric-earnings').innerHTML = formatCents(data.earnings) + '<span class="sub">gross</span>';
-      document.getElementById('metric-tips').textContent = formatCents(data.tips);
-      document.getElementById('metric-rate').innerHTML = '$' + data.ratePerHour.toFixed(2) + '<span class="sub">/hr</span>';
-      document.getElementById('metric-duration').textContent = data.shiftDuration;
-      document.getElementById('metric-last').innerHTML = formatCents(data.lastRide.total) + '<span class="sub" id="metric-last-time">' + data.lastRide.at + '</span>';
-      document.getElementById('metric-pickup').textContent = data.lastRide.pickup;
-      document.getElementById('metric-dropoff').textContent = data.lastRide.dropoff;
+      const active = data.shiftActive;
+      document.getElementById('metric-rides').textContent = active ? data.metrics.rides.toString() : '0';
+      document.getElementById('metric-earnings').innerHTML = active ? formatCents(data.metrics.earnings_cents) + '<span class="sub">incl tips</span>' : '$0<span class="sub">incl tips</span>';
+      document.getElementById('metric-tips').textContent = active ? formatCents(data.metrics.tips_cents) : '$0';
+      document.getElementById('metric-rate').innerHTML = active ? '$' + (data.metrics.rate_per_hour ?? 0).toFixed(2) + '<span class="sub">/hr</span>' : '$0<span class="sub">/hr</span>';
+      const durationSeconds = active ? data.metrics.duration_seconds : 0;
+      const hours = Math.floor(durationSeconds / 3600);
+      const mins = Math.floor((durationSeconds % 3600) / 60);
+      document.getElementById('metric-duration').textContent = active ? hours + 'h ' + mins.toString().padStart(2, '0') + 'm' : '0h 00m';
+
+      if (active && data.lastRide) {
+        document.getElementById('metric-last').innerHTML = formatCents(data.lastRide.total_cents) + '<span class="sub" id="metric-last-time">' + data.lastRide.at + '</span>';
+        document.getElementById('metric-pickup').textContent = data.lastRide.pickup;
+        document.getElementById('metric-dropoff').textContent = data.lastRide.dropoff;
+      } else {
+        document.getElementById('metric-last').innerHTML = '$0<span class="sub" id="metric-last-time">—</span>';
+        document.getElementById('metric-pickup').textContent = '—';
+        document.getElementById('metric-dropoff').textContent = '—';
+      }
+
       const status = document.getElementById('shift-status');
-      status.textContent = data.shiftActive ? ' Shift Active' : ' Shift Paused';
+      status.textContent = active ? ' Shift Active' : ' Shift Paused';
       const pulse = document.createElement('span');
       pulse.className = 'pulse';
       status.prepend(pulse);
     }
 
-    render(state.data);
-    // TODO: hook up WebSocket updates using channel/token once server-side streaming is added.
+    function ensureMap() {
+      if (map) return;
+      map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://demotiles.maplibre.org/style.json',
+        center: [-122.4194, 37.7749],
+        zoom: 12,
+        interactive: false
+      });
+      map.on('load', () => {
+        map.addSource('route', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+        });
+        map.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          paint: { 'line-color': '#6ef2c4', 'line-width': 4, 'line-opacity': 0.8 }
+        });
+        mapReady = true;
+    });
+}
+
+    function updateMap(path) {
+      if (!mapReady) return;
+      const coords = path ?? [];
+      const source = map.getSource('route');
+      if (source) {
+        source.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
+      }
+      if (coords.length > 1) {
+        const bounds = coords.reduce(
+          (b, c) => b.extend(c),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: 30, maxZoom: 15, duration: 0 });
+      }
+
+      // Update start/end markers
+      if (startMarker) startMarker.remove();
+      if (endMarker) endMarker.remove();
+      if (coords.length > 0) {
+        startMarker = new maplibregl.Marker({ color: '#6ef2c4' }).setLngLat(coords[0]).addTo(map);
+        endMarker = new maplibregl.Marker({ color: '#ff7b7b' }).setLngLat(coords[coords.length - 1]).addTo(map);
+      }
+    }
+
+    function updateMarkers(markers) {
+      if (!mapReady) return;
+      if (markers?.pickup) {
+        if (startMarker) startMarker.remove();
+        startMarker = new maplibregl.Marker({ color: '#6ef2c4' })
+          .setLngLat([markers.pickup.lng, markers.pickup.lat])
+          .addTo(map);
+      }
+      if (markers?.dropoff) {
+        if (endMarker) endMarker.remove();
+        endMarker = new maplibregl.Marker({ color: '#ff7b7b' })
+          .setLngLat([markers.dropoff.lng, markers.dropoff.lat])
+          .addTo(map);
+      }
+    }
+
+let eventSource = null;
+
+function connectStream() {
+  try {
+        eventSource = new EventSource('/overlay/stream');
+        eventSource.onmessage = (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            render(data);
+            updateMap(data.path);
+            updateMarkers(data.markers);
+          } catch (e) {
+            console.error('Failed to parse stream payload', e);
+          }
+        };
+        eventSource.onerror = () => {
+          console.warn('Overlay stream error, retrying in 5s');
+          eventSource.close();
+          setTimeout(connectStream, 5000);
+        };
+      } catch (err) {
+        console.error('Failed to connect stream', err);
+      }
+    }
+
+    ensureMap();
+    connectStream();
   </script>
 </body>
 </html>`;
 }
 
 export async function overlayRoutes(fastify: FastifyInstance) {
-    fastify.get('/overlay', async (request, reply) => {
-        const parsed = OverlayQuery.safeParse(request.query ?? {});
-        if (!parsed.success) {
-            return reply.status(400).send('Invalid query');
-        }
-
-        const html = overlayHtml(parsed.data.channel, parsed.data.token);
+    fastify.get('/overlay', async (_request, reply) => {
+        const html = overlayHtml();
         reply.header('content-type', 'text/html; charset=utf-8').send(html);
+    });
+
+    fastify.get('/overlay/data', async (_request, reply) => {
+        const response = buildOverlayPayload();
+        reply.header('content-type', 'application/json').send(response);
+    });
+
+    fastify.get('/overlay/stream', async (_request, reply) => {
+        reply.raw.setHeader('Content-Type', 'text/event-stream');
+        reply.raw.setHeader('Cache-Control', 'no-cache');
+        reply.raw.setHeader('Connection', 'keep-alive');
+
+        const send = () => {
+            const payload = buildOverlayPayload();
+            reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
+        };
+
+        const interval = setInterval(send, 5000);
+        const listener = () => send();
+        overlayEmitter.on('update', listener);
+        send();
+
+        reply.raw.on('close', () => {
+            clearInterval(interval);
+            overlayEmitter.off('update', listener);
+        });
     });
 }

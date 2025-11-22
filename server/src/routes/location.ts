@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getDb } from '../db.js';
 import { requireToken } from '../auth.js';
+import { overlayEmitter } from './overlay.js';
 
 const LocationPingSchema = z.object({
     ts: z.string(),
@@ -75,6 +76,8 @@ export async function locationRoutes(fastify: FastifyInstance) {
         });
 
         runTransaction();
+
+        overlayEmitter.emit('update');
 
         return { inserted: pings.length };
     });
