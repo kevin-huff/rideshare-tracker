@@ -24,10 +24,7 @@ function overlayHtml(channel: string, token?: string) {
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #040710;
-      --glass: rgba(255,255,255,0.06);
-      --accent: #7c9bff;
-      --accent-2: #6ef2c4;
+      --glass: rgba(10,12,22,0.65);
       --text: #eef2ff;
       --muted: #94a3b8;
       --success: #6ef2c4;
@@ -39,30 +36,36 @@ function overlayHtml(channel: string, token?: string) {
       min-height: 100vh;
       font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
       color: var(--text);
-      background: radial-gradient(circle at 20% 20%, rgba(124,155,255,0.25), transparent 35%),
-                  radial-gradient(circle at 80% 0%, rgba(110,242,196,0.2), transparent 30%),
-                  var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
+      background: transparent;
+      overflow: hidden;
     }
     .overlay {
-      width: min(1100px, 95vw);
-      background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 18px;
-      padding: 18px 18px 12px;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+      position: relative;
+      width: 100vw;
+      height: 100vh;
       overflow: hidden;
+    }
+    .map {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      backdrop-filter: blur(4px);
+    }
+    .hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
     }
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 12px;
     }
     .pill {
       display: inline-flex;
@@ -163,42 +166,45 @@ function overlayHtml(channel: string, token?: string) {
     }
   </style>
 </head>
-<body>
+  <body>
   <div class="overlay">
-    <div class="header">
-      <div class="pill">Channel <strong id="channel">${safeChannel}</strong></div>
-      <div class="status" id="shift-status"><span class="pulse"></span> Shift Active</div>
-      <div class="pill">Token <strong id="token">${safeToken ? '••••••••' : 'none'}</strong></div>
-    </div>
+    <div class="map" id="map"></div>
+    <div class="hud">
+      <div class="header">
+        <div class="pill">Channel <strong id="channel">${safeChannel}</strong></div>
+        <div class="status" id="shift-status"><span class="pulse"></span> Shift Active</div>
+        <div class="pill">Token <strong id="token">${safeToken ? '••••••••' : 'none'}</strong></div>
+      </div>
 
-    <div class="grid">
-      <div class="card">
-        <div class="label">Rides</div>
-        <div class="metric" id="metric-rides">0</div>
-        <div class="muted">Completed this shift</div>
-      </div>
-      <div class="card">
-        <div class="label">Earnings</div>
-        <div class="metric" id="metric-earnings">$0<span class="sub">gross</span></div>
-        <div class="row">
-          <span class="muted">Tips</span>
-          <span class="muted" id="metric-tips">$0</span>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Rides</div>
+          <div class="metric" id="metric-rides">0</div>
+          <div class="muted">Completed this shift</div>
         </div>
-      </div>
-      <div class="card">
-        <div class="label">$ / hr</div>
-        <div class="metric" id="metric-rate">$0<span class="sub">/hr</span></div>
-        <div class="row">
-          <span class="muted">On shift</span>
-          <span class="muted" id="metric-duration">0h 00m</span>
+        <div class="card">
+          <div class="label">Earnings</div>
+          <div class="metric" id="metric-earnings">$0<span class="sub">gross</span></div>
+          <div class="row">
+            <span class="muted">Tips</span>
+            <span class="muted" id="metric-tips">$0</span>
+          </div>
         </div>
-      </div>
-      <div class="card">
-        <div class="label">Last Ride</div>
-        <div class="metric" id="metric-last">$0<span class="sub" id="metric-last-time">—</span></div>
-        <div class="last-ride">
-          <div class="small">Pickup: <span id="metric-pickup">—</span></div>
-          <div class="small">Dropoff: <span id="metric-dropoff">—</span></div>
+        <div class="card">
+          <div class="label">$ / hr</div>
+          <div class="metric" id="metric-rate">$0<span class="sub">/hr</span></div>
+          <div class="row">
+            <span class="muted">On shift</span>
+            <span class="muted" id="metric-duration">0h 00m</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="label">Last Ride</div>
+          <div class="metric" id="metric-last">$0<span class="sub" id="metric-last-time">—</span></div>
+          <div class="last-ride">
+            <div class="small">Pickup: <span id="metric-pickup">—</span></div>
+            <div class="small">Dropoff: <span id="metric-dropoff">—</span></div>
+          </div>
         </div>
       </div>
     </div>
