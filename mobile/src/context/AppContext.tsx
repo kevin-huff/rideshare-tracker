@@ -10,6 +10,7 @@ import * as RideDB from '../db/rides';
 import { enqueueRequest } from '../db/queue';
 import * as API from '../api/client';
 import { startSync, stopSync, triggerImmediateSync } from '../api/sync';
+import * as LocationService from '../services/LocationService';
 
 interface AppContextValue {
     // State
@@ -25,6 +26,7 @@ interface AppContextValue {
     markPickup: () => Promise<void>;
     endRide: (grossCents: number, dropoffLat?: number, dropoffLng?: number) => Promise<void>;
     addTip: (tipCents: number) => Promise<void>;
+    resetToIdle: () => void;
 
     // UI helpers
     isLoading: boolean;
@@ -77,6 +79,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             updateStats(activeShift);
         }
     }, [activeShift]);
+
+    // Hook location service to app state/ride state
+    useEffect(() => {
+        if (!activeShift || state === 'idle' || state === 'shift_ended') {
+            LocationService.stop();
+            return;
+        }
+
+        const isRide = state === 'en_route' || state === 'in_ride';
+        const mode = isRide ? 'ride' : 'waiting';
+        LocationService.start(activeShift.id, activeRide?.id ?? undefined, mode);
+        LocationService.setMode(mode, activeRide?.id ?? undefined);
+    }, [activeShift, activeRide, state]);
 
     /**
      * Restore active shift from database on app launch.
@@ -424,6 +439,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     }, [activeShift]);
 
+    const resetToIdle = useCallback(() => {
+        stopSync();
+        LocationService.stop();
+        setState('idle');
+        setActiveShift(null);
+        setActiveRide(null);
+    }, []);
+
     const clearError = useCallback(() => setError(null), []);
 
     const value: AppContextValue = {
@@ -437,6 +460,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         markPickup,
         endRide,
         addTip,
+        resetToIdle,
         isLoading,
         error,
         clearError,
