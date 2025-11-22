@@ -161,6 +161,22 @@ export async function markRideSynced(rideId: string): Promise<void> {
 }
 
 /**
+ * Get the most recent ride for a shift.
+ */
+export async function getLastRideForShift(shiftId: string): Promise<Ride | null> {
+    const db = getDatabase();
+    const [result] = await db.executeSql(
+        'SELECT * FROM rides WHERE shift_id = ? ORDER BY started_at DESC LIMIT 1',
+        [shiftId]
+    );
+
+    if (result.rows.length === 0) {
+        return null;
+    }
+    return rowToRide(result.rows.item(0));
+}
+
+/**
  * Update ride ID (replace local UUID with server ID after sync).
  * Also updates all related location pings to maintain foreign key integrity.
  */

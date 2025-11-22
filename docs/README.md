@@ -21,6 +21,7 @@ Comprehensive guide for testing the Phase 2.1 Mobile Core on physical Android de
 ### Mobile
 - See `mobile/README.md` for build instructions
 - Component documentation: See inline JSDoc in source files
+- Map stack: MapLibre GL via `@rnmapbox/maps` v10.x (chosen for RN 0.73 compatibility; v11 has peer conflicts)
 
 ## Contributing
 

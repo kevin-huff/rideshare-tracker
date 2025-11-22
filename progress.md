@@ -17,14 +17,14 @@
 ## 🟡 Phase 2: Mobile Core + Live Overlay (Current)
 **Goal**: Build the Android app with background location, client state machine, and wire the OBS overlay to live data.
 
-- [ ] **State Machine**: Implement Shift/Ride logic on the client.
-- [ ] **UI Implementation**:
-  - [ ] "Start Shift" Screen.
-  - [ ] "Active Shift" / Map View.
-  - [ ] "Ride in Progress" View.
-- [ ] **Location Service**: Foreground Service for reliable GPS tracking.
-- [ ] **API Integration**: Connect app to server endpoints.
-- [ ] **Offline Queue**: Handle network drops (store pings locally, retry later).
+- [x] **State Machine**: Shift/Ride logic in AppContext with offline queueing and ID mapping.
+- [x] **UI Implementation**:
+  - [x] "Start Shift" / Idle screen with last-shift summary + settings entry.
+  - [x] "Active Shift" / Map View with MapLibre, stats, ride actions.
+  - [x] "Ride in Progress" view + fare/tip modal; tip while idle between rides.
+- [x] **Location Service**: Foreground service wrapper with ride/wait modes, local ping storage.
+- [x] **API Integration**: Client with retry and queued replay; settings screen for base URL/device token.
+- [x] **Offline Queue**: Pending request queue with ID reconciliation and location batch upload.
 - [ ] **OBS Overlay (Live)**: WebSocket/REST hookup for shift/ride stats; render map tiles + route.
 
 ## ⚪ Phase 3: Dashboard & Heatmaps (Next)

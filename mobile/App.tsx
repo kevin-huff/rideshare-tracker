@@ -5,8 +5,10 @@ import { AppProvider, useAppContext } from './src/context/AppContext';
 import IdleScreen from './src/screens/IdleScreen';
 import ActiveShiftScreen from './src/screens/ActiveShiftScreen';
 import ShiftSummaryScreen from './src/screens/ShiftSummaryScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import { ShiftStats, Shift } from './src/types';
 import * as ShiftDB from './src/db/shifts';
+import * as RideDB from './src/db/rides';
 
 function RootApp() {
     const {
@@ -25,6 +27,8 @@ function RootApp() {
     } = useAppContext();
     const [permissionsReady, setPermissionsReady] = useState(false);
     const [lastShift, setLastShift] = useState<ShiftStats | null>(null);
+    const [lastRide, setLastRide] = useState<Ride | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
 
     useEffect(() => {
         requestPermissions();
@@ -62,11 +66,12 @@ function RootApp() {
         const loadLastShift = async () => {
             try {
                 const history = await ShiftDB.getShiftHistory(1);
-                if (history.length === 0) {
+                const last: Shift | undefined = history[0];
+                if (!last) {
                     setLastShift(null);
+                    setLastRide(null);
                     return;
                 }
-                const last: Shift = history[0];
                 const durationSeconds =
                     last.ended_at && last.started_at
                         ? (new Date(last.ended_at).getTime() - new Date(last.started_at).getTime()) / 1000
@@ -79,9 +84,13 @@ function RootApp() {
                     ratePerHour: durationSeconds > 0 ? (last.earnings_cents / 100) / (durationSeconds / 3600) : 0,
                     distance: last.distance_miles,
                 });
+
+                const ride = await RideDB.getLastRideForShift(last.id);
+                setLastRide(ride ?? null);
             } catch (err) {
                 // ignore if DB not ready yet
                 setLastShift(null);
+                setLastRide(null);
             }
         };
         loadLastShift();
@@ -97,7 +106,14 @@ function RootApp() {
 
     let screen = null;
     if (state === 'idle') {
-        screen = <IdleScreen onStartShift={startShift} loading={isLoading} lastShift={lastShift} />;
+        screen = (
+            <View style={{ flex: 1 }}>
+                <IdleScreen onStartShift={startShift} loading={isLoading} lastShift={lastShift} />
+                <View style={styles.settingsButton}>
+                    <Button title="Settings" onPress={() => setShowSettings(true)} variant="secondary" />
+                </View>
+            </View>
+        );
     } else if (state === 'shift_ended') {
         screen = <ShiftSummaryScreen stats={stats} onClose={resetToIdle} />;
     } else {
@@ -111,6 +127,7 @@ function RootApp() {
                 onAddTip={addTip}
                 onEndShift={endShift}
                 loading={isLoading}
+                lastRide={lastRide}
             />
         );
     }
@@ -118,7 +135,7 @@ function RootApp() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor="#060B16" />
-            {screen}
+            {showSettings ? <SettingsScreen onClose={() => setShowSettings(false)} /> : screen}
         </SafeAreaView>
     );
 }
@@ -141,5 +158,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#060B16',
+    },
+    settingsButton: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
     },
 });

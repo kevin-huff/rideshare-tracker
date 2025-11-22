@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import StatCard from '../components/StatCard';
 import RideSummaryModal from './RideSummaryModal';
 import { AppStateType, ShiftStats } from '../types';
+import { Ride } from '../types';
 
 interface Props {
     state: AppStateType;
@@ -15,6 +16,7 @@ interface Props {
     onAddTip: (tipCents: number) => void;
     onEndShift: () => void;
     loading: boolean;
+    lastRide?: Ride | null;
 }
 
 export function ActiveShiftScreen({
@@ -26,6 +28,7 @@ export function ActiveShiftScreen({
     onAddTip,
     onEndShift,
     loading,
+    lastRide,
 }: Props) {
     const [showSummary, setShowSummary] = useState(false);
     const [showTip, setShowTip] = useState(false);
@@ -99,6 +102,14 @@ export function ActiveShiftScreen({
                                 variant="secondary"
                             />
                         </>
+                    )}
+                    {state === 'shift_active' && lastRide && (
+                        <Button
+                            title="Add Tip to Last Ride"
+                            onPress={() => setShowTip(true)}
+                            loading={loading}
+                            variant="secondary"
+                        />
                     )}
                     <Button
                         title="End Shift"
