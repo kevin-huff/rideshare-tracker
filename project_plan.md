@@ -4,6 +4,8 @@ Version: 0.5
 ## 1. Project Overview
 **Rideshare Tracker** is a private, self-hosted system for a single Android driver to track shifts, rides, earnings, tips, expenses, mileage, and routes. It also provides an OBS overlay for streaming.
 
+> Roadmap tracking lives in `progress.md` (source of truth). This document is a reference for scope and architecture.
+
 **Core Philosophy**
 - **Single User**: no multi-tenancy, no complex auth flows.
 - **Self-Hosted**: server runs on Railway; user owns data.
@@ -174,22 +176,17 @@ Version: 0.5
 
 ## 8. Roadmap
 
-**Phase 1: Core Android App + Overlay**
-- Shift and Ride state machine.
-- Foreground Service + background location.
-- Local SQLite on device; batch ingest to server.
-- OBS overlay with live stats.
-- **DoD**: 60-minute test drive; overlay latency < 1.0 s; distance error < 5 percent.
+**Phase 1: Foundation & Server (Complete)**  
+Server/API, auth, SQLite schema, tests, and initial OBS overlay shell.
 
-**Phase 2: Dashboard + Heatmaps**
-- Web dashboard with history and charts.
-- Pickup and drop-off heatmaps with date filters.
-- CSV export.
+**Phase 2: Mobile Core + Live Overlay (Current)**  
+Android shift/ride state machine, background location + batching, offline queue, app UI, and live OBS overlay wiring (stats + map).
 
-**Phase 3: Expenses + Backups + Polish**
-- Expense logging with receipt uploads to S3-compatible storage.
-- Automated DB backups.
-- Privacy redaction radius; theming.
+**Phase 3: Dashboard & Heatmaps (Next)**  
+Desktop dashboard with history/analytics, pickup/drop-off heatmaps, and CSV export.
+
+**Phase 4: Expenses, Backups, Polish (Future)**  
+Expenses with receipts, automated DB backups, privacy redaction, and theming.
 
 ---
 
@@ -220,7 +217,8 @@ Version: 0.5
 - **Backups**: Use a cron job within the container or a sidecar service (like Litestream) to replicate the SQLite database to an external S3 bucket for disaster recovery.
 
 **6. Timeline & Cost (Estimate)**
-- **Phase 1 (Core)**: 2-3 weeks. (High priority: reliable GPS & State Machine).
-- **Phase 2 (Dashboard)**: 1-2 weeks. (Frontend work).
-- **Phase 3 (Polish)**: 1 week.
-- **Total**: ~4-6 weeks.
+- **Phase 1 (Foundation)**: Complete.
+- **Phase 2 (Mobile Core + Live Overlay)**: 2-3 weeks (state machine, background location, offline queue, overlay wiring).
+- **Phase 3 (Dashboard & Heatmaps)**: 1-2 weeks (analytics + map layers).
+- **Phase 4 (Expenses/Backups/Polish)**: ~1 week.
+- **Total (remaining)**: ~3-6 weeks.

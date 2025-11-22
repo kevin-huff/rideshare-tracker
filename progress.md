@@ -1,6 +1,6 @@
 # Project Progress Tracker
 
-## 🟢 Phase 1: Foundation & Server (Current)
+## 🟢 Phase 1: Foundation & Server (Complete)
 **Goal**: Establish the monorepo, server infrastructure, and core data models.
 
 - [x] **Monorepo Setup**: Root `package.json`, workspaces for `server` and `mobile`.
@@ -14,8 +14,8 @@
 - [x] **Mobile Scaffold**: React Native project initialized (Android starter screen; core app/state/services still TODO).
 - [x] **OBS Overlay**: Transparent HUD overlay with stats grid and map slot for OBS (live data hookup pending).
 
-## 🟡 Phase 2: Mobile Core (Next Up)
-**Goal**: Build the Android app with background location and state management.
+## 🟡 Phase 2: Mobile Core + Live Overlay (Current)
+**Goal**: Build the Android app with background location, client state machine, and wire the OBS overlay to live data.
 
 - [ ] **State Machine**: Implement Shift/Ride logic on the client.
 - [ ] **UI Implementation**:
@@ -25,18 +25,18 @@
 - [ ] **Location Service**: Foreground Service for reliable GPS tracking.
 - [ ] **API Integration**: Connect app to server endpoints.
 - [ ] **Offline Queue**: Handle network drops (store pings locally, retry later).
-- [ ] **OBS Overlay**: Wire live data + map tiles into overlay; animate updates for OBS.
+- [ ] **OBS Overlay (Live)**: WebSocket/REST hookup for shift/ride stats; render map tiles + route.
 
-## ⚪ Phase 3: Overlay & Dashboard (Future)
-**Goal**: Visualizations for streaming and analytics.
+## ⚪ Phase 3: Dashboard & Heatmaps (Next)
+**Goal**: Desktop analytics and spatial views.
 
-- [ ] **OBS Overlay**: Real-time stats and map for streamers.
-- [ ] **Web Dashboard**: Heatmaps, ride history, earnings analytics.
-- [ ] **Data Management**: Export to CSV, edit records.
+- [ ] **Web Dashboard**: History views, earnings analytics, filtering.
+- [ ] **Heatmaps**: Pickup/drop-off heatmaps with date filters.
+- [ ] **Data Management**: Edit/delete records and CSV export.
 
-## ⚪ Phase 4: Polish & Advanced Features (Future)
+## ⚪ Phase 4: Expenses, Backups, Polish (Future)
 **Goal**: Refinements and extra tooling.
 
 - [ ] **Expenses**: Receipt capture and logging.
 - [ ] **Backups**: Automated S3 replication.
-- [ ] **Theming**: Dark mode refinement.
+- [ ] **Privacy & Theming**: Location redaction radius, dark mode refinement.
