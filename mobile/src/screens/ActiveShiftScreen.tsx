@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import MapboxGL from '@rnmapbox/maps';
 import Button from '../components/Button';
 import StatCard from '../components/StatCard';
 import RideSummaryModal from './RideSummaryModal';
@@ -30,6 +31,9 @@ export function ActiveShiftScreen({
     const [showTip, setShowTip] = useState(false);
     const [tipValue, setTipValue] = useState('');
 
+    MapboxGL.setAccessToken('');
+    MapboxGL.setWellKnownTileServer('MapLibre');
+
     const rideStatusLabel =
         state === 'en_route'
             ? 'En route to pickup'
@@ -43,8 +47,13 @@ export function ActiveShiftScreen({
                 <Text style={styles.title}>Shift Active</Text>
                 <Text style={styles.subtitle}>{rideStatusLabel}</Text>
 
-                <View style={styles.mapPlaceholder}>
-                    <Text style={styles.mapText}>Map placeholder</Text>
+                <View style={styles.mapContainer}>
+                    <MapboxGL.MapView
+                        style={styles.map}
+                        styleURL="https://demotiles.maplibre.org/style.json"
+                    >
+                        <MapboxGL.Camera zoomLevel={12} centerCoordinate={[-122.4194, 37.7749]} />
+                    </MapboxGL.MapView>
                 </View>
 
                 <View style={styles.statsRow}>
@@ -146,18 +155,16 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         marginBottom: 12,
     },
-    mapPlaceholder: {
-        backgroundColor: '#0B1220',
+    mapContainer: {
+        height: 220,
         borderRadius: 16,
-        height: 200,
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflow: 'hidden',
         borderWidth: 1,
         borderColor: '#111827',
         marginBottom: 16,
     },
-    mapText: {
-        color: '#6B7280',
+    map: {
+        flex: 1,
     },
     statsRow: {
         flexDirection: 'row',
