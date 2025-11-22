@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import Button from '../components/Button';
 import { ShiftStats } from '../types';
+import { getOverlayUrl } from '../api/client';
 
 interface Props {
     onStartShift: () => void;
@@ -10,12 +11,30 @@ interface Props {
 }
 
 export function IdleScreen({ onStartShift, loading, lastShift }: Props) {
+    const shareOverlay = async () => {
+        try {
+            const url = await getOverlayUrl();
+            await Share.share({
+                message: `Live rideshare map: ${url}`,
+                title: 'Live rideshare map'
+            });
+        } catch (err) {
+            Alert.alert('Share failed', err instanceof Error ? err.message : 'Could not share link');
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Ready to drive</Text>
             <Text style={styles.subtitle}>Start your shift to begin tracking rides and earnings.</Text>
 
             <Button title="Start Shift" onPress={onStartShift} loading={loading} />
+            <Button
+                title="Share live overlay"
+                onPress={shareOverlay}
+                variant="secondary"
+                style={{ marginTop: 12, width: '100%' }}
+            />
 
             {lastShift ? (
                 <View style={styles.summary}>

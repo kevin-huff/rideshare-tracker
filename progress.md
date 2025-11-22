@@ -25,7 +25,7 @@
 - [x] **Location Service**: Foreground service wrapper with ride/wait modes, local ping storage.
 - [x] **API Integration**: Client with retry and queued replay; settings screen for base URL/device token.
 - [x] **Offline Queue**: Pending request queue with ID reconciliation and location batch upload.
-- [ ] **OBS Overlay (Live)**: WebSocket/REST hookup for shift/ride stats; render map tiles + route.
+- [x] **OBS Overlay (Live)**: SSE/REST feed for shift/ride stats; MapLibre route + pickup/dropoff markers.
 
 ## ⚪ Phase 3: Dashboard & Heatmaps (Next)
 **Goal**: Desktop analytics and spatial views.

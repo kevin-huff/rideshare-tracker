@@ -52,6 +52,14 @@ export async function setDeviceToken(token: string): Promise<void> {
 }
 
 /**
+ * Compute the public overlay URL for sharing/OBS.
+ */
+export async function getOverlayUrl(): Promise<string> {
+    const baseUrl = await getApiBaseUrl();
+    return `${baseUrl.replace(/\/$/, '')}/overlay`;
+}
+
+/**
  * Make an authenticated API request with retry logic.
  */
 async function apiRequest<T>(

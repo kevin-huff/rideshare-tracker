@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import Button from '../components/Button';
 import StatCard from '../components/StatCard';
 import RideSummaryModal from './RideSummaryModal';
 import { AppStateType, ShiftStats } from '../types';
 import { Ride } from '../types';
+import { getOverlayUrl } from '../api/client';
 
 interface Props {
     state: AppStateType;
@@ -44,6 +45,18 @@ export function ActiveShiftScreen({
             ? 'Ride in progress'
             : 'Waiting for ride';
 
+    const shareOverlay = async () => {
+        try {
+            const url = await getOverlayUrl();
+            await Share.share({
+                message: `Live rideshare map: ${url}`,
+                title: 'Live rideshare map'
+            });
+        } catch (err) {
+            Alert.alert('Share failed', err instanceof Error ? err.message : 'Could not share link');
+        }
+    };
+
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -81,6 +94,7 @@ export function ActiveShiftScreen({
                 </View>
 
                 <View style={styles.actions}>
+                    <Button title="Share live overlay" onPress={shareOverlay} variant="secondary" />
                     {state === 'shift_active' && (
                         <Button title="Start Ride" onPress={onStartRide} loading={loading} />
                     )}

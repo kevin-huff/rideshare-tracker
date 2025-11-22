@@ -99,7 +99,7 @@ Version: 0.5
 ### 4.3 Data Flow
 - Phone records pings to **local SQLite** continuously.
 - Phone batches to server via HTTPS when online; retries with exponential backoff.
-- Server persists to SQLite; pushes **WebSocket** updates to overlay channels.
+- Server persists to SQLite; pushes **SSE** updates to the overlay.
 
 ### 4.4 Deployment
 - **Railway**: one service for API + WS; one Volume for SQLite file.
@@ -109,7 +109,7 @@ Version: 0.5
 ### 4.5 Security
 - **Device Pairing**: Initial setup involves scanning a QR code on the dashboard to exchange the `device_token`.
 - **Device Token**: Used for all API ingest endpoints.
-- **Channel Token**: Used for read-only OBS overlay WebSocket connection.
+- **Overlay**: Public SSE overlay; data intended for streaming.
 - **Encryption**: TLS for all transport; tokens stored in Android Keystore.
 
 ### 4.6 Build & CI/CD
@@ -168,9 +168,9 @@ Version: 0.5
 - **Auth**: `Authorization: Bearer <device-token>`.
 
 **Overlay**
-- OBS loads `/overlay.html?channel=<id>&token=<t>`.
-- Overlay connects to `ws://.../ws?channel=<id>&token=<t>`.
-- Messages: `shift_update`, `ride_update`, `stats_update`, `alert`.
+- OBS loads `/overlay`.
+- Overlay connects to `GET /overlay/stream` (Server-Sent Events).
+- Payload: shift/ride stats, path polyline, and pickup/dropoff markers.
 
 ---
 
