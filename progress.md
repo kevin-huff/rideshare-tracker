@@ -10,9 +10,9 @@
 - [x] **API - Rides**: Start/End ride, tip addition, transaction support.
 - [x] **API - Location**: Batch ingest of GPS pings.
 - [x] **Auth**: Basic Bearer token authentication (`DEVICE_TOKEN` required; add to `.env`/`.env.example`).
-- [x] **Testing**: Unit/Integration tests for all endpoints (`vitest`), CI-ready locally (CI workflow not added yet).
+- [x] **Testing**: Unit/Integration tests for all endpoints (`vitest`); GitHub Actions workflow runs server tests on push/PR.
 - [x] **Mobile Scaffold**: React Native project initialized (Android starter screen; core app/state/services still TODO).
-- [ ] **OBS Overlay**: Minimal overlay for Phase 1 DoD (pending).
+- [x] **OBS Overlay**: Transparent HUD overlay with stats grid and map slot for OBS (live data hookup pending).
 
 ## 🟡 Phase 2: Mobile Core (Next Up)
 **Goal**: Build the Android app with background location and state management.
@@ -25,7 +25,7 @@
 - [ ] **Location Service**: Foreground Service for reliable GPS tracking.
 - [ ] **API Integration**: Connect app to server endpoints.
 - [ ] **Offline Queue**: Handle network drops (store pings locally, retry later).
-- [ ] **OBS Overlay**: Real-time stats/minimal map to meet Phase 1 DoD.
+- [ ] **OBS Overlay**: Wire live data + map tiles into overlay; animate updates for OBS.
 
 ## ⚪ Phase 3: Overlay & Dashboard (Future)
 **Goal**: Visualizations for streaming and analytics.
