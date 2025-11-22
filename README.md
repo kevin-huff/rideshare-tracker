@@ -180,7 +180,7 @@ See [progress.md](./progress.md) for detailed status.
 
 ## 📄 License
 
-This project is for personal use. See repository for details.
+Released under the [Unlicense](./LICENSE) — public domain, no restrictions.
 
 ---
 
