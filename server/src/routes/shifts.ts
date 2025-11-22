@@ -2,38 +2,16 @@ import { FastifyInstance } from 'fastify';
 import { getDb } from '../db.js';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
+import { requireToken } from '../auth.js';
 
 const ShiftSchema = z.object({});
 const ShiftIdParams = z.object({
     id: z.string().uuid()
 });
 
-function verifyToken(request: any, reply: any) {
-    const configuredToken = process.env.DEVICE_TOKEN;
-    if (!configuredToken) {
-        request.log.error('DEVICE_TOKEN not configured');
-        reply.status(500).send({ error: 'Server misconfigured' });
-        return false;
-    }
-
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        reply.status(401).send({ error: 'Unauthorized' });
-        return false;
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (token !== configuredToken) {
-        reply.status(401).send({ error: 'Unauthorized' });
-        return false;
-    }
-
-    return true;
-}
-
 export async function shiftRoutes(fastify: FastifyInstance) {
     fastify.post('/v1/shifts', async (request, reply) => {
-        if (!verifyToken(request, reply)) {
+        if (!requireToken(request, reply)) {
             return;
         }
 
@@ -58,7 +36,7 @@ export async function shiftRoutes(fastify: FastifyInstance) {
     });
 
     fastify.patch('/v1/shifts/:id/end', async (request, reply) => {
-        if (!verifyToken(request, reply)) {
+        if (!requireToken(request, reply)) {
             return;
         }
 
