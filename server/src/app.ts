@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { initDb } from './db.js';
 import { shiftRoutes } from './routes/shifts.js';
 
-export function build() {
+export function build(dbPath?: string) {
     const server = Fastify({
         logger: {
             level: 'info'
@@ -10,7 +10,7 @@ export function build() {
     });
 
     // Initialize DB
-    initDb();
+    initDb(dbPath);
 
     server.register(shiftRoutes);
 
