@@ -9,6 +9,7 @@ import { uploadLocationBatch, getApiBaseUrl, getDeviceToken } from './client';
 import { resolveServerId } from '../db/util';
 import * as ShiftDB from '../db/shifts';
 import * as RideDB from '../db/rides';
+import * as ExpenseDB from '../db/expenses';
 
 const SYNC_INTERVAL_MS = 30000; // 30 seconds
 const MAX_RETRIES = 10;
@@ -250,6 +251,10 @@ async function handlePostSuccessMappings(meta: any, response: any): Promise<void
     if (meta.type === 'ride_create' && meta.localId) {
         await RideDB.updateRideId(meta.localId, serverId);
         await RideDB.markRideSynced(serverId);
+    }
+
+    if (meta.type === 'expense_create' && meta.localId) {
+        await ExpenseDB.markExpenseSynced(meta.localId, serverId, json.receipt_url ?? null);
     }
 }
 

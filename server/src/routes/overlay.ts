@@ -1,15 +1,106 @@
 import { FastifyInstance } from 'fastify';
 import { getDb } from '../db.js';
 import EventEmitter from 'events';
+import { getOverlayTheme, getSettings } from '../settings.js';
+
+function formatCoords(lat?: number | null, lng?: number | null) {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+        return '—';
+    }
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+function redactCoordinate(lat: number, lng: number, radiusMeters: number) {
+    if (radiusMeters <= 0) {
+        return { lat, lng };
+    }
+    const metersPerDegreeLat = 111320;
+    const metersPerDegreeLng = 111320 * Math.max(Math.cos((lat * Math.PI) / 180), 0.2);
+    const latStep = radiusMeters / metersPerDegreeLat;
+    const lngStep = radiusMeters / metersPerDegreeLng;
+
+    return {
+        lat: Math.round(lat / latStep) * latStep,
+        lng: Math.round(lng / lngStep) * lngStep
+    };
+}
+
+function applyPrivacy(payload: any, opts: { hide: boolean; radius: number }) {
+    if (!payload.shiftActive) {
+        return { ...payload, path: [], markers: { pickup: null, dropoff: null } };
+    }
+
+    if (opts.hide) {
+        return {
+            ...payload,
+            path: [],
+            markers: { pickup: null, dropoff: null },
+            lastRide: payload.lastRide
+                ? { ...payload.lastRide, pickup: 'Hidden', dropoff: 'Hidden' }
+                : null
+        };
+    }
+
+    const redactedPath = opts.radius > 0
+        ? payload.path.map(([lng, lat]: [number, number]) => {
+              const redacted = redactCoordinate(lat, lng, opts.radius);
+              return [redacted.lng, redacted.lat];
+          })
+        : payload.path;
+
+    const redactMarker = (marker: any) => {
+        if (!marker) return null;
+        const redacted = opts.radius > 0
+            ? redactCoordinate(marker.lat, marker.lng, opts.radius)
+            : marker;
+        return { lat: redacted.lat, lng: redacted.lng };
+    };
+
+    const pickupMarker = redactMarker(payload.markers?.pickup);
+    const dropoffMarker = redactMarker(payload.markers?.dropoff);
+
+    const lastRide = payload.lastRide
+        ? {
+              ...payload.lastRide,
+              pickup: pickupMarker ? formatCoords(pickupMarker.lat, pickupMarker.lng) : '—',
+              dropoff: dropoffMarker ? formatCoords(dropoffMarker.lat, dropoffMarker.lng) : '—'
+          }
+        : null;
+
+    return {
+        ...payload,
+        path: redactedPath,
+        markers: { pickup: pickupMarker, dropoff: dropoffMarker },
+        lastRide
+    };
+}
 
 function buildOverlayPayload() {
     const db = getDb();
+    const settings = getSettings();
+    const theme = getOverlayTheme(settings.overlay_theme);
+
     const shift = db
         .prepare('SELECT * FROM shifts WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1')
         .get();
 
     if (!shift) {
-        return { shiftActive: false };
+        return {
+            shiftActive: false,
+            metrics: {
+                rides: 0,
+                earnings_cents: 0,
+                tips_cents: 0,
+                distance_miles: 0,
+                duration_seconds: 0,
+                rate_per_hour: 0
+            },
+            lastRide: null,
+            path: [],
+            markers: { pickup: null, dropoff: null },
+            theme,
+            privacy: { radius_m: settings.overlay_privacy_radius_m, hide: Boolean(settings.overlay_hide_location) }
+        };
     }
 
     const durationSeconds = Math.floor(
@@ -30,14 +121,14 @@ function buildOverlayPayload() {
 
     const pings = db
         .prepare(
-            `SELECT lat, lng, ride_id FROM location_pings
+            `SELECT lat, lng FROM location_pings
              WHERE shift_id = ?
              ORDER BY ts ASC
              LIMIT 500`
         )
         .all(shift.id);
 
-    return {
+    const payload = {
         shiftActive: true,
         metrics: {
             rides: shift.ride_count,
@@ -52,12 +143,8 @@ function buildOverlayPayload() {
                   id: lastRide.id,
                   total_cents: (lastRide.gross_cents ?? 0) + (lastRide.tip_cents ?? 0),
                   at: lastRide.ended_at ?? lastRide.started_at,
-                  pickup: lastRide.pickup_lat
-                      ? `${lastRide.pickup_lat.toFixed(4)}, ${lastRide.pickup_lng?.toFixed(4)}`
-                      : '—',
-                  dropoff: lastRide.dropoff_lat
-                      ? `${lastRide.dropoff_lat.toFixed(4)}, ${lastRide.dropoff_lng?.toFixed(4)}`
-                      : '—'
+                  pickup: formatCoords(lastRide.pickup_lat, lastRide.pickup_lng),
+                  dropoff: formatCoords(lastRide.dropoff_lat, lastRide.dropoff_lng)
               }
             : null,
         path: pings.map((p: any) => [p.lng, p.lat]),
@@ -68,8 +155,18 @@ function buildOverlayPayload() {
             dropoff: lastRide && lastRide.dropoff_lat
                 ? { lng: lastRide.dropoff_lng, lat: lastRide.dropoff_lat }
                 : null
+        },
+        theme,
+        privacy: {
+            radius_m: settings.overlay_privacy_radius_m,
+            hide: Boolean(settings.overlay_hide_location)
         }
     };
+
+    return applyPrivacy(payload, {
+        hide: Boolean(settings.overlay_hide_location),
+        radius: settings.overlay_privacy_radius_m ?? 0
+    });
 }
 
 export const overlayEmitter = new EventEmitter();
@@ -88,11 +185,13 @@ function overlayHtml() {
   <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
   <style>
     :root {
-      --glass: rgba(10,12,22,0.65);
+      --glass: rgba(10,12,22,0.7);
       --text: #eef2ff;
       --muted: #94a3b8;
       --success: #6ef2c4;
       --danger: #ff7b7b;
+      --accent: #7dd3fc;
+      --bg: #030712;
     }
     * { box-sizing: border-box; }
     body {
@@ -100,7 +199,9 @@ function overlayHtml() {
       min-height: 100vh;
       font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
       color: var(--text);
-      background: transparent;
+      background: radial-gradient(circle at 20% 20%, rgba(125,211,252,0.12), transparent 35%),
+                  radial-gradient(circle at 80% 0%, rgba(252,165,165,0.08), transparent 35%),
+                  var(--bg);
       overflow: hidden;
     }
     .overlay {
@@ -153,13 +254,13 @@ function overlayHtml() {
       gap: 8px;
       padding: 8px 12px;
       border-radius: 12px;
-      background: rgba(110,242,196,0.12);
-      color: var(--success);
+      background: linear-gradient(120deg, rgba(125,211,252,0.14), rgba(110,242,196,0.18));
+      color: var(--text);
       font-weight: 700;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       font-size: 12px;
-      border: 1px solid rgba(110,242,196,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
     }
     .grid {
       display: grid;
@@ -278,11 +379,38 @@ function overlayHtml() {
     let startMarker = null;
     let endMarker = null;
 
+    function hexToRgba(hex, alpha) {
+      if (!hex) return '';
+      const normalized = hex.replace('#', '');
+      const bigint = parseInt(normalized, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+    }
+
+    function applyTheme(theme) {
+      if (!theme) return;
+      const root = document.documentElement;
+      root.style.setProperty('--glass', theme.glass);
+      root.style.setProperty('--text', theme.text);
+      root.style.setProperty('--muted', theme.muted);
+      root.style.setProperty('--success', theme.success);
+      root.style.setProperty('--danger', theme.danger);
+      root.style.setProperty('--accent', theme.accent);
+      root.style.setProperty('--bg', theme.background);
+      document.body.style.background =
+        'radial-gradient(circle at 20% 20%, ' + hexToRgba(theme.accent,0.16) +
+        ', transparent 36%), radial-gradient(circle at 80% 0%, ' + hexToRgba(theme.danger,0.1) +
+        ', transparent 32%), ' + theme.background;
+    }
+
     function formatCents(cents) {
       return '$' + (cents / 100).toFixed(2);
     }
 
     function render(data) {
+      applyTheme(data.theme);
       const active = data.shiftActive;
       document.getElementById('metric-rides').textContent = active ? data.metrics.rides.toString() : '0';
       document.getElementById('metric-earnings').innerHTML = active ? formatCents(data.metrics.earnings_cents) + '<span class="sub">incl tips</span>' : '$0<span class="sub">incl tips</span>';
@@ -352,6 +480,8 @@ function overlayHtml() {
       // Update start/end markers
       if (startMarker) startMarker.remove();
       if (endMarker) endMarker.remove();
+      startMarker = null;
+      endMarker = null;
       if (coords.length > 0) {
         startMarker = new maplibregl.Marker({ color: '#6ef2c4' }).setLngLat(coords[0]).addTo(map);
         endMarker = new maplibregl.Marker({ color: '#ff7b7b' }).setLngLat(coords[coords.length - 1]).addTo(map);
@@ -360,6 +490,14 @@ function overlayHtml() {
 
     function updateMarkers(markers) {
       if (!mapReady) return;
+      if (!markers?.pickup && startMarker) {
+        startMarker.remove();
+        startMarker = null;
+      }
+      if (!markers?.dropoff && endMarker) {
+        endMarker.remove();
+        endMarker = null;
+      }
       if (markers?.pickup) {
         if (startMarker) startMarker.remove();
         startMarker = new maplibregl.Marker({ color: '#6ef2c4' })

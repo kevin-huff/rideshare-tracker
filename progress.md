@@ -14,7 +14,7 @@
 - [x] **Mobile Scaffold**: React Native project initialized (Android starter screen; core app/state/services still TODO).
 - [x] **OBS Overlay**: Transparent HUD overlay with stats grid and map slot for OBS (live data hookup pending).
 
-## 🟡 Phase 2: Mobile Core + Live Overlay (Current)
+## 🟢 Phase 2: Mobile Core + Live Overlay (Complete)
 **Goal**: Build the Android app with background location, client state machine, and wire the OBS overlay to live data.
 
 - [x] **State Machine**: Shift/Ride logic in AppContext with offline queueing and ID mapping.
@@ -34,9 +34,9 @@
 - [ ] **Heatmaps**: Pickup/drop-off heatmaps with date filters.
 - [ ] **Data Management**: Edit/delete records and CSV export.
 
-## ⚪ Phase 4: Expenses, Backups, Polish (Future)
+## 🟢 Phase 4: Expenses, Privacy, Polish (Complete — backups removed)
 **Goal**: Refinements and extra tooling.
 
-- [ ] **Expenses**: Receipt capture and logging.
-- [ ] **Backups**: Automated S3 replication.
-- [ ] **Privacy & Theming**: Location redaction radius, dark mode refinement.
+- [x] **Expenses**: Receipt capture and logging.
+- [ ] **Backups**: Removed from scope (no automated replication).
+- [x] **Privacy & Theming**: Location redaction radius, dark mode refinement.

@@ -5,7 +5,7 @@ import { getDatabase } from './index';
  * Persist a local->server ID mapping for later rewrites.
  */
 export async function saveIdMapping(
-    entity: 'shift' | 'ride',
+    entity: 'shift' | 'ride' | 'expense',
     localId: string,
     serverId: string,
     tx?: SQLite.Transaction

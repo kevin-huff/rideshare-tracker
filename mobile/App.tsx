@@ -6,9 +6,12 @@ import IdleScreen from './src/screens/IdleScreen';
 import ActiveShiftScreen from './src/screens/ActiveShiftScreen';
 import ShiftSummaryScreen from './src/screens/ShiftSummaryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import ExpensesScreen from './src/screens/ExpensesScreen';
+import Button from './src/components/Button';
 import { ShiftStats, Shift } from './src/types';
 import * as ShiftDB from './src/db/shifts';
 import * as RideDB from './src/db/rides';
+import { ThemeProvider, useTheme } from './src/theme';
 
 function RootApp() {
     const {
@@ -29,6 +32,8 @@ function RootApp() {
     const [lastShift, setLastShift] = useState<ShiftStats | null>(null);
     const [lastRide, setLastRide] = useState<Ride | null>(null);
     const [showSettings, setShowSettings] = useState(false);
+    const [showExpenses, setShowExpenses] = useState(false);
+    const { theme } = useTheme();
 
     useEffect(() => {
         requestPermissions();
@@ -98,8 +103,8 @@ function RootApp() {
 
     if (!permissionsReady) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#F9FAFB" />
+            <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.accent} />
             </View>
         );
     }
@@ -108,7 +113,12 @@ function RootApp() {
     if (state === 'idle') {
         screen = (
             <View style={{ flex: 1 }}>
-                <IdleScreen onStartShift={startShift} loading={isLoading} lastShift={lastShift} />
+                <IdleScreen
+                    onStartShift={startShift}
+                    loading={isLoading}
+                    lastShift={lastShift}
+                    onAddExpense={() => setShowExpenses(true)}
+                />
                 <View style={styles.settingsButton}>
                     <Button title="Settings" onPress={() => setShowSettings(true)} variant="secondary" />
                 </View>
@@ -128,23 +138,32 @@ function RootApp() {
                 onEndShift={endShift}
                 loading={isLoading}
                 lastRide={lastRide}
+                onAddExpense={() => setShowExpenses(true)}
             />
         );
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor="#060B16" />
-            {showSettings ? <SettingsScreen onClose={() => setShowSettings(false)} /> : screen}
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+            <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
+            {showSettings ? (
+                <SettingsScreen onClose={() => setShowSettings(false)} />
+            ) : showExpenses ? (
+                <ExpensesScreen onClose={() => setShowExpenses(false)} />
+            ) : (
+                screen
+            )}
         </SafeAreaView>
     );
 }
 
 export default function App() {
     return (
-        <AppProvider>
-            <RootApp />
-        </AppProvider>
+        <ThemeProvider>
+            <AppProvider>
+                <RootApp />
+            </AppProvider>
+        </ThemeProvider>
     );
 }
 

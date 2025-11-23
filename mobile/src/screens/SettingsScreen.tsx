@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View, Switch, TouchableOpacity } from 'react-native';
 import Button from '../components/Button';
-import { getApiBaseUrl, setApiBaseUrl, getDeviceToken, setDeviceToken } from '../api/client';
+import {
+    getApiBaseUrl,
+    setApiBaseUrl,
+    getDeviceToken,
+    setDeviceToken,
+    fetchSettings,
+    updateSettings,
+} from '../api/client';
+import { useTheme, Theme, themeOptions } from '../theme';
+import { ThemeName } from '../types';
 
 interface Props {
     onClose: () => void;
@@ -11,6 +20,11 @@ export function SettingsScreen({ onClose }: Props) {
     const [apiUrl, setApiUrl] = useState('');
     const [deviceToken, setToken] = useState('');
     const [loading, setLoading] = useState(false);
+    const [privacyRadius, setPrivacyRadius] = useState('0');
+    const [hideLocation, setHideLocation] = useState(false);
+    const [selectedTheme, setSelectedTheme] = useState<ThemeName>('midnight');
+    const { theme, setTheme, name: currentTheme } = useTheme();
+    const styles = getStyles(theme);
 
     useEffect(() => {
         const load = async () => {
@@ -19,6 +33,21 @@ export function SettingsScreen({ onClose }: Props) {
                 const token = await getDeviceToken().catch(() => '');
                 setApiUrl(url);
                 setToken(token);
+                setSelectedTheme(currentTheme);
+
+                if (url && token) {
+                    try {
+                        const serverSettings = await fetchSettings();
+                        setPrivacyRadius(serverSettings.overlay_privacy_radius_m.toString());
+                        setHideLocation(serverSettings.overlay_hide_location);
+                        if (serverSettings.overlay_theme) {
+                            setSelectedTheme(serverSettings.overlay_theme as ThemeName);
+                            await setTheme(serverSettings.overlay_theme as ThemeName);
+                        }
+                    } catch (err) {
+                        console.warn('[Settings] Unable to fetch server settings', err);
+                    }
+                }
             } catch (err) {
                 // ignore
             }
@@ -32,8 +61,18 @@ export function SettingsScreen({ onClose }: Props) {
             if (apiUrl.trim().length === 0) throw new Error('API URL required');
             if (!apiUrl.startsWith('http')) throw new Error('API URL must start with http:// or https://');
             if (deviceToken.trim().length === 0) throw new Error('Device token required');
+            const radiusValue = parseInt(privacyRadius, 10);
+            if (isNaN(radiusValue) || radiusValue < 0) {
+                throw new Error('Privacy radius must be a positive number (meters)');
+            }
             await setApiBaseUrl(apiUrl.trim());
             await setDeviceToken(deviceToken.trim());
+            await updateSettings({
+                overlay_privacy_radius_m: radiusValue,
+                overlay_hide_location: hideLocation,
+                overlay_theme: selectedTheme,
+            });
+            await setTheme(selectedTheme);
             Alert.alert('Saved', 'Settings updated');
             onClose();
         } catch (err) {
@@ -50,7 +89,7 @@ export function SettingsScreen({ onClose }: Props) {
             <TextInput
                 style={styles.input}
                 placeholder="https://api.example.com"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.muted}
                 value={apiUrl}
                 onChangeText={setApiUrl}
                 autoCapitalize="none"
@@ -61,50 +100,128 @@ export function SettingsScreen({ onClose }: Props) {
             <TextInput
                 style={styles.input}
                 placeholder="Device token"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={theme.muted}
                 value={deviceToken}
                 onChangeText={setToken}
                 autoCapitalize="none"
                 autoCorrect={false}
             />
+            <View style={styles.section}>
+                <Text style={styles.label}>Privacy</Text>
+                <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>Hide location on overlay</Text>
+                    <Switch
+                        value={hideLocation}
+                        onValueChange={setHideLocation}
+                        trackColor={{ true: theme.accent, false: theme.border }}
+                        thumbColor={hideLocation ? theme.accent : theme.surfaceAlt}
+                    />
+                </View>
+                <Text style={styles.label}>Redaction radius (meters)</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    placeholderTextColor={theme.muted}
+                    keyboardType="numeric"
+                    value={privacyRadius}
+                    onChangeText={setPrivacyRadius}
+                />
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.label}>Overlay & App Theme</Text>
+                <View style={styles.themeRow}>
+                    {themeOptions.map((option) => (
+                        <TouchableOpacity
+                            key={option}
+                            onPress={() => setSelectedTheme(option as ThemeName)}
+                            style={[
+                                styles.themePill,
+                                selectedTheme === option && { borderColor: theme.accent, backgroundColor: theme.surfaceAlt },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.themeText,
+                                    selectedTheme === option && { color: theme.accent },
+                                ]}
+                            >
+                                {option}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
             <Button title="Save" onPress={handleSave} loading={loading} />
             <Button title="Close" onPress={onClose} variant="secondary" style={{ marginTop: 8 }} />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#060B16',
+        backgroundColor: theme.background,
         padding: 24,
     },
     title: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 22,
         fontWeight: '800',
         marginBottom: 16,
     },
     label: {
-        color: '#9CA3AF',
+        color: theme.muted,
         marginTop: 12,
         marginBottom: 6,
         fontSize: 13,
     },
     input: {
-        backgroundColor: '#0B1220',
-        color: '#F9FAFB',
+        backgroundColor: theme.inputBackground,
+        color: theme.text,
         borderRadius: 12,
         paddingHorizontal: 14,
         paddingVertical: 12,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#1F2937',
+        borderColor: theme.border,
     },
     hint: {
-        color: '#6B7280',
+        color: theme.muted,
         fontSize: 12,
         marginTop: 4,
+    },
+    section: {
+        marginTop: 12,
+    },
+    switchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 6,
+    },
+    switchLabel: {
+        color: theme.text,
+        fontSize: 14,
+    },
+    themeRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8,
+    },
+    themePill: {
+        borderWidth: 1,
+        borderColor: theme.border,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    themeText: {
+        color: theme.text,
+        fontWeight: '600',
+        textTransform: 'capitalize',
     },
 });
 

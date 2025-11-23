@@ -9,7 +9,7 @@ SQLite.DEBUG(__DEV__);
 SQLite.enablePromise(true);
 
 const DB_NAME = 'rideshare.db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
@@ -55,6 +55,10 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
 
     if (currentVersion < 2) {
         await migrateToV2(db);
+    }
+
+    if (currentVersion < 3) {
+        await migrateToV3(db);
     }
 }
 
@@ -180,6 +184,34 @@ async function migrateToV2(db: SQLite.SQLiteDatabase): Promise<void> {
     });
 
     console.log('[DB] Migration to v2 complete.');
+}
+
+/**
+ * Migration to v3: expenses table for receipts.
+ */
+async function migrateToV3(db: SQLite.SQLiteDatabase): Promise<void> {
+    console.log('[DB] Running migration to v3...');
+
+    await db.transaction(async (tx) => {
+        await tx.executeSql(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY NOT NULL,
+        ts TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL,
+        note TEXT,
+        receipt_base64 TEXT,
+        receipt_mime TEXT,
+        receipt_url TEXT,
+        synced INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+        await tx.executeSql('CREATE INDEX IF NOT EXISTS idx_expenses_ts ON expenses(ts)');
+        await tx.executeSql('PRAGMA user_version = 3');
+    });
+
+    console.log('[DB] Migration to v3 complete.');
 }
 
 /**

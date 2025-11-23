@@ -104,4 +104,44 @@ describe('Overlay Route', () => {
         expect(body.lastRide.id).toBe('ride-active');
         expect(body.markers.pickup).toEqual({ lat: 37.72, lng: -122.42 });
     });
+
+    it('redacts coordinates when privacy radius is set', async () => {
+        const db = getDb();
+        const now = new Date().toISOString();
+        db.prepare(
+            `INSERT INTO shifts (id, started_at, earnings_cents, tips_cents, distance_miles, ride_count)
+             VALUES ('shift-privacy', ?, 0, 0, 0, 0)`
+        ).run(now);
+        db.prepare(
+            `INSERT INTO rides (id, shift_id, status, started_at, pickup_at, pickup_lat, pickup_lng)
+             VALUES ('ride-privacy', 'shift-privacy', 'in_progress', ?, ?, 37.7701, -122.4199)`
+        ).run(now, now);
+        db.prepare('UPDATE settings SET overlay_privacy_radius_m = 1000 WHERE id = 1').run();
+
+        const response = await app.inject({ method: 'GET', url: '/overlay/data' });
+        const body = JSON.parse(response.body);
+        expect(body.markers.pickup).toBeTruthy();
+        expect(body.markers.pickup.lat).not.toBeCloseTo(37.7701, 4);
+        expect(body.lastRide.pickup).not.toContain('37.7701');
+    });
+
+    it('hides coordinates entirely when privacy toggle is enabled', async () => {
+        const db = getDb();
+        const now = new Date().toISOString();
+        db.prepare(
+            `INSERT INTO shifts (id, started_at, earnings_cents, tips_cents, distance_miles, ride_count)
+             VALUES ('shift-hide', ?, 0, 0, 0, 0)`
+        ).run(now);
+        db.prepare(
+            `INSERT INTO rides (id, shift_id, status, started_at, pickup_at, pickup_lat, pickup_lng)
+             VALUES ('ride-hide', 'shift-hide', 'in_progress', ?, ?, 37.7701, -122.4199)`
+        ).run(now, now);
+        db.prepare('UPDATE settings SET overlay_hide_location = 1 WHERE id = 1').run();
+
+        const response = await app.inject({ method: 'GET', url: '/overlay/data' });
+        const body = JSON.parse(response.body);
+        expect(body.path.length).toBe(0);
+        expect(body.markers.pickup).toBeNull();
+        expect(body.lastRide.pickup).toBe('Hidden');
+    });
 });

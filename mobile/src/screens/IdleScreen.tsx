@@ -3,14 +3,19 @@ import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import Button from '../components/Button';
 import { ShiftStats } from '../types';
 import { getOverlayUrl } from '../api/client';
+import { useTheme, Theme } from '../theme';
 
 interface Props {
     onStartShift: () => void;
     loading: boolean;
     lastShift?: ShiftStats | null;
+    onAddExpense?: () => void;
 }
 
-export function IdleScreen({ onStartShift, loading, lastShift }: Props) {
+export function IdleScreen({ onStartShift, loading, lastShift, onAddExpense }: Props) {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
     const shareOverlay = async () => {
         try {
             const url = await getOverlayUrl();
@@ -35,6 +40,14 @@ export function IdleScreen({ onStartShift, loading, lastShift }: Props) {
                 variant="secondary"
                 style={{ marginTop: 12, width: '100%' }}
             />
+            {onAddExpense ? (
+                <Button
+                    title="Log Expense"
+                    onPress={onAddExpense}
+                    variant="secondary"
+                    style={{ marginTop: 12, width: '100%' }}
+                />
+            ) : null}
 
             {lastShift ? (
                 <View style={styles.summary}>
@@ -51,42 +64,42 @@ export function IdleScreen({ onStartShift, loading, lastShift }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#060B16',
+        backgroundColor: theme.background,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
     },
     title: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 26,
         fontWeight: '800',
         marginBottom: 8,
     },
     subtitle: {
-        color: '#9CA3AF',
+        color: theme.muted,
         textAlign: 'center',
         marginBottom: 24,
     },
     summary: {
         marginTop: 24,
-        backgroundColor: '#0B1220',
+        backgroundColor: theme.surface,
         padding: 16,
         borderRadius: 14,
         width: '100%',
         borderWidth: 1,
-        borderColor: '#111827',
+        borderColor: theme.border,
     },
     summaryTitle: {
-        color: '#E5E7EB',
+        color: theme.text,
         fontWeight: '700',
         marginBottom: 6,
         fontSize: 16,
     },
     summaryText: {
-        color: '#9CA3AF',
+        color: theme.muted,
         marginBottom: 2,
     },
 });

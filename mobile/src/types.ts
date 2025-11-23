@@ -3,6 +3,8 @@
  * These match the server schema and define the state machine.
  */
 
+export type ThemeName = 'midnight' | 'ember' | 'glacier';
+
 // ============================================================================
 // Database Models (matching server schema)
 // ============================================================================
@@ -48,6 +50,18 @@ export interface LocationPing {
     accuracy_m: number;
     source: 'gps' | 'network' | 'fused';
     synced: boolean; // local-only field
+}
+
+export interface Expense {
+    id: string;
+    ts: string;
+    category: string;
+    amount_cents: number;
+    note: string | null;
+    receipt_url?: string | null;
+    receipt_base64?: string | null;
+    receipt_mime?: string | null;
+    synced: boolean;
 }
 
 export interface PendingRequest {
@@ -139,6 +153,38 @@ export interface LocationBatch {
         source: 'gps' | 'network' | 'fused';
     }>;
 }
+
+export interface CreateExpenseRequest {
+    ts?: string;
+    category: string;
+    amount_cents: number;
+    note?: string;
+    receipt_base64?: string;
+    receipt_mime?: string;
+}
+
+export interface CreateExpenseResponse {
+    id: string;
+    ts: string;
+    receipt_url?: string | null;
+}
+
+export interface ExpenseResponse {
+    id: string;
+    ts: string;
+    category: string;
+    amount_cents: number;
+    note?: string | null;
+    receipt_url?: string | null;
+}
+
+export interface SettingsResponse {
+    overlay_privacy_radius_m: number;
+    overlay_hide_location: boolean;
+    overlay_theme: ThemeName;
+}
+
+export type UpdateSettingsRequest = Partial<SettingsResponse>;
 
 // ============================================================================
 // Component Props

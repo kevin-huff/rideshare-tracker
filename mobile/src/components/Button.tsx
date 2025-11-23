@@ -1,12 +1,16 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { useTheme, Theme } from '../theme';
 
 type Variant = 'primary' | 'secondary' | 'danger';
 
-const VARIANT_STYLES: Record<Variant, { backgroundColor: string; textColor: string }> = {
-    primary: { backgroundColor: '#111827', textColor: '#F9FAFB' },
-    secondary: { backgroundColor: '#1F2937', textColor: '#E5E7EB' },
-    danger: { backgroundColor: '#7F1D1D', textColor: '#FEE2E2' },
+const getVariantStyles = (variant: Variant, theme: Theme) => {
+    const variants: Record<Variant, { backgroundColor: string; textColor: string }> = {
+        primary: { backgroundColor: theme.accent, textColor: theme.accentText },
+        secondary: { backgroundColor: theme.surfaceAlt, textColor: theme.text },
+        danger: { backgroundColor: theme.danger, textColor: '#fff' },
+    };
+    return variants[variant];
 };
 
 interface Props {
@@ -19,7 +23,8 @@ interface Props {
 }
 
 export function Button({ title, onPress, disabled, loading, variant = 'primary', style }: Props) {
-    const colors = VARIANT_STYLES[variant];
+    const { theme } = useTheme();
+    const colors = getVariantStyles(variant, theme);
 
     return (
         <Pressable
@@ -27,7 +32,11 @@ export function Button({ title, onPress, disabled, loading, variant = 'primary',
             disabled={disabled || loading}
             style={({ pressed }) => [
                 styles.base,
-                { backgroundColor: colors.backgroundColor, opacity: pressed ? 0.85 : 1 },
+                {
+                    backgroundColor: colors.backgroundColor,
+                    opacity: pressed ? 0.85 : 1,
+                    shadowColor: theme.isDark ? '#000' : '#111',
+                },
                 disabled ? styles.disabled : null,
                 style,
             ]}

@@ -103,7 +103,6 @@ Version: 0.5
 
 ### 4.4 Deployment
 - **Railway**: one service for API + WS; one Volume for SQLite file.
-- **Backups**: scheduled dump or Litestream-style continuous replication to an S3-compatible bucket.
 - **Static assets**: overlay page and dashboard assets served by the Node app.
 
 ### 4.5 Security
@@ -185,7 +184,7 @@ Android shift/ride state machine, background location + batching, offline queue,
 **Phase 3: Dashboard & Heatmaps (Next)**  
 Desktop dashboard with history/analytics, pickup/drop-off heatmaps, and CSV export.
 
-**Phase 4: Expenses, Backups, Polish (Future)**  
+**Phase 4: Expenses, Privacy, Polish (Complete — backups removed)**  
 Expenses with receipts, automated DB backups, privacy redaction, and theming.
 
 ---
@@ -214,11 +213,10 @@ Expenses with receipts, automated DB backups, privacy redaction, and theming.
 **5. Railway Deployment**
 - **Build**: Use a `Dockerfile` to build the Node.js server.
 - **Storage**: Mount a **Railway Volume** to `/app/data` to store the `db.sqlite` file. This ensures data persists across deployments.
-- **Backups**: Use a cron job within the container or a sidecar service (like Litestream) to replicate the SQLite database to an external S3 bucket for disaster recovery.
 
 **6. Timeline & Cost (Estimate)**
 - **Phase 1 (Foundation)**: Complete.
 - **Phase 2 (Mobile Core + Live Overlay)**: 2-3 weeks (state machine, background location, offline queue, overlay wiring).
 - **Phase 3 (Dashboard & Heatmaps)**: 1-2 weeks (analytics + map layers).
-- **Phase 4 (Expenses/Backups/Polish)**: ~1 week.
+- **Phase 4 (Expenses/Privacy/Polish)**: ~1 week (shipped; backups intentionally omitted).
 - **Total (remaining)**: ~3-6 weeks.

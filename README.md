@@ -2,15 +2,17 @@
 
 > 🚗 Self-hosted shift, ride, and earnings tracker for rideshare drivers with live OBS overlay and Android app.
 
-**Status**: Phase 2 Complete — Mobile Core + Live Overlay ✅
+**Status**: Phase 4 Ship — Expenses/Privacy ✅ (Dashboard/Heatmaps still pending)
 
 ---
 
 ## ✨ Features
 
 - **📊 Shift & Ride Tracking**: Start/end shifts and rides, track earnings, tips, mileage, and ride details
+- **💵 Expenses & Receipts**: Log expenses with receipt photos (offline safe) and view history
 - **📍 Background Location**: Continuous GPS tracking with route visualization and pickup/dropoff markers
 - **🎥 Live OBS Overlay**: Real-time stats via Server-Sent Events at `/overlay` — perfect for streaming
+- **🛡️ Privacy & Themes**: Redaction radius or hide-location toggle plus themed overlay accents
 - **📱 React Native App**: Android-first client for starting/ending shifts/rides and sharing the overlay link
 - **🗺️ MapLibre Integration**: Beautiful route visualization on both mobile and overlay
 
@@ -61,6 +63,7 @@ Export env vars or create a `.env` in `server/`:
 DEVICE_TOKEN=your-secure-token-here      # required
 DB_PATH=./rideshare.db                   # optional
 PORT=3000                                # optional
+RECEIPTS_DIR=./receipts                  # optional receipts storage
 ```
 
 ### 3. Run the Server
@@ -104,6 +107,7 @@ npm test --workspace server
 ### Features
 - **Share Overlay**: Tap "Share live overlay" to send the public overlay URL
 - **On-device history**: Shows last shift/ride stats from local SQLite
+- **Expenses**: Log expenses with receipt photos; offline queue will sync when online
 
 ---
 
@@ -124,6 +128,7 @@ The overlay is **public** and requires **no authentication** — perfect for str
 - **Live Map**: Session route polyline with auto-bounds fitting
 - **Markers**: Green (start/pickup), Red (end/dropoff)
 - **SSE Updates**: Instant updates when rides/shifts change
+- **Privacy & Themes**: Redaction radius or hide-all toggle plus overlay theme presets (midnight/ember/glacier)
 
 ---
 
@@ -139,6 +144,8 @@ The overlay is **public** and requires **no authentication** — perfect for str
 - `DEVICE_TOKEN` (required) — Bearer token for mobile app API access
 - `DB_PATH` (optional) — Defaults to `rideshare.db` in working directory
 - `PORT` (optional) — Defaults to `3000`
+- `BACKUP_S3_BUCKET`, `BACKUP_S3_PREFIX`, `BACKUP_INTERVAL_MINUTES` — Enable scheduled S3 backups (falls back to `BACKUP_LOCAL_DIR` if provided)
+- `RECEIPTS_DIR` — Where receipt images are stored/served from (`/receipts/<file>` is exposed)
 
 ---
 
@@ -151,6 +158,9 @@ The overlay is **public** and requires **no authentication** — perfect for str
 - `PATCH /v1/rides/:id/end` — End ride (with earnings)
 - `POST /v1/rides/:id/tips` — Add tip to completed ride
 - `POST /v1/location` — Batch GPS ping upload
+- `POST /v1/expenses` — Create an expense with optional receipt (auth)
+- `GET /v1/expenses` — List expenses (auth)
+- `GET /v1/settings` / `PATCH /v1/settings` — Overlay privacy/theme settings (auth)
 
 **Auth**: All data ingest endpoints require `Authorization: Bearer <DEVICE_TOKEN>`
 
@@ -166,7 +176,7 @@ The overlay is **public** and requires **no authentication** — perfect for str
 - ✅ **Phase 1**: Foundation & Server — Complete
 - ✅ **Phase 2**: Mobile Core + Live Overlay — Complete
 - ⬜ **Phase 3**: Dashboard & Heatmaps — Next
-- ⬜ **Phase 4**: Expenses, Backups, Polish — Future
+- ✅ **Phase 4**: Expenses, Privacy, Polish — Complete (backups removed)
 
 See [progress.md](./progress.md) for detailed status.
 

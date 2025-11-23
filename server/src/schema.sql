@@ -40,3 +40,19 @@ CREATE TABLE IF NOT EXISTS location_pings (
   FOREIGN KEY(shift_id) REFERENCES shifts(id),
   FOREIGN KEY(ride_id) REFERENCES rides(id)
 );
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id TEXT PRIMARY KEY,
+  ts TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  note TEXT,
+  receipt_url TEXT
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  id INTEGER PRIMARY KEY CHECK(id = 1),
+  overlay_privacy_radius_m INTEGER DEFAULT 0,
+  overlay_hide_location INTEGER DEFAULT 0,
+  overlay_theme TEXT DEFAULT 'midnight'
+);

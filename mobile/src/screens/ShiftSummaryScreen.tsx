@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Button from '../components/Button';
 import { ShiftStats } from '../types';
+import { useTheme, Theme } from '../theme';
 
 interface Props {
     stats: ShiftStats;
@@ -9,6 +10,9 @@ interface Props {
 }
 
 export function ShiftSummaryScreen({ stats, onClose }: Props) {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Shift Complete</Text>
@@ -26,6 +30,8 @@ export function ShiftSummaryScreen({ stats, onClose }: Props) {
 }
 
 function Row({ label, value }: { label: string; value: string }) {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
     return (
         <View style={styles.row}>
             <Text style={styles.label}>{label}</Text>
@@ -34,26 +40,26 @@ function Row({ label, value }: { label: string; value: string }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#060B16',
+        backgroundColor: theme.background,
         padding: 24,
         justifyContent: 'center',
     },
     title: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 24,
         fontWeight: '800',
         textAlign: 'center',
         marginBottom: 16,
     },
     card: {
-        backgroundColor: '#0B1220',
+        backgroundColor: theme.surface,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#111827',
+        borderColor: theme.border,
         marginBottom: 16,
     },
     row: {
@@ -62,10 +68,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     label: {
-        color: '#9CA3AF',
+        color: theme.muted,
     },
     value: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontWeight: '700',
     },
 });

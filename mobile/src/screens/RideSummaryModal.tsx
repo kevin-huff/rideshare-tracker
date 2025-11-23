@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, View } from 'react-native';
 import Button from '../components/Button';
+import { useTheme, Theme } from '../theme';
 
 interface Props {
     visible: boolean;
@@ -10,6 +11,8 @@ interface Props {
 
 export function RideSummaryModal({ visible, onSubmit, onCancel }: Props) {
     const [fare, setFare] = useState<string>('');
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     const handleSubmit = () => {
         const value = parseFloat(fare);
@@ -42,7 +45,7 @@ export function RideSummaryModal({ visible, onSubmit, onCancel }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     backdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.65)',
@@ -51,32 +54,32 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     card: {
-        backgroundColor: '#0B1220',
+        backgroundColor: theme.surface,
         width: '100%',
         borderRadius: 16,
         padding: 20,
         borderWidth: 1,
-        borderColor: '#111827',
+        borderColor: theme.border,
     },
     title: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 20,
         fontWeight: '800',
     },
     subtitle: {
-        color: '#9CA3AF',
+        color: theme.muted,
         marginTop: 4,
         marginBottom: 12,
     },
     input: {
-        backgroundColor: '#111827',
-        color: '#F9FAFB',
+        backgroundColor: theme.inputBackground,
+        color: theme.text,
         borderRadius: 12,
         paddingHorizontal: 14,
         paddingVertical: 12,
         fontSize: 16,
         borderWidth: 1,
-        borderColor: '#1F2937',
+        borderColor: theme.border,
         marginBottom: 12,
     },
 });

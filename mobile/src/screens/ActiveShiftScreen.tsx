@@ -7,6 +7,7 @@ import RideSummaryModal from './RideSummaryModal';
 import { AppStateType, ShiftStats } from '../types';
 import { Ride } from '../types';
 import { getOverlayUrl } from '../api/client';
+import { useTheme, Theme } from '../theme';
 
 interface Props {
     state: AppStateType;
@@ -18,6 +19,7 @@ interface Props {
     onEndShift: () => void;
     loading: boolean;
     lastRide?: Ride | null;
+    onAddExpense?: () => void;
 }
 
 export function ActiveShiftScreen({
@@ -30,10 +32,13 @@ export function ActiveShiftScreen({
     onEndShift,
     loading,
     lastRide,
+    onAddExpense,
 }: Props) {
     const [showSummary, setShowSummary] = useState(false);
     const [showTip, setShowTip] = useState(false);
     const [tipValue, setTipValue] = useState('');
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     MapboxGL.setAccessToken('');
     MapboxGL.setWellKnownTileServer('MapLibre');
@@ -95,6 +100,9 @@ export function ActiveShiftScreen({
 
                 <View style={styles.actions}>
                     <Button title="Share live overlay" onPress={shareOverlay} variant="secondary" />
+                    {onAddExpense ? (
+                        <Button title="Log Expense" onPress={onAddExpense} variant="secondary" />
+                    ) : null}
                     {state === 'shift_active' && (
                         <Button title="Start Ride" onPress={onStartRide} loading={loading} />
                     )}
@@ -162,22 +170,22 @@ export function ActiveShiftScreen({
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#060B16',
+        backgroundColor: theme.background,
     },
     scroll: {
         padding: 16,
         paddingBottom: 32,
     },
     title: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 24,
         fontWeight: '800',
     },
     subtitle: {
-        color: '#9CA3AF',
+        color: theme.muted,
         marginBottom: 12,
     },
     mapContainer: {
@@ -185,8 +193,9 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#111827',
+        borderColor: theme.border,
         marginBottom: 16,
+        backgroundColor: theme.surface,
     },
     map: {
         flex: 1,

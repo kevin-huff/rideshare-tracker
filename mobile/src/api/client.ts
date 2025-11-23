@@ -10,6 +10,11 @@ import {
     StartRideRequest,
     EndRideRequest,
     AddTipRequest,
+    CreateExpenseRequest,
+    CreateExpenseResponse,
+    UpdateSettingsRequest,
+    SettingsResponse,
+    ExpenseResponse,
 } from '../types';
 
 const API_BASE_URL_KEY = '@api_base_url';
@@ -150,4 +155,33 @@ export async function addTip(rideId: string, request: AddTipRequest): Promise<vo
 
 export async function uploadLocationBatch(batch: LocationBatch): Promise<void> {
     return apiRequest<void>('POST', '/v1/location', batch);
+}
+
+// ============================================================================
+// Expenses
+// ============================================================================
+
+export async function createExpense(request: CreateExpenseRequest): Promise<CreateExpenseResponse> {
+    return apiRequest<CreateExpenseResponse>('POST', '/v1/expenses', request);
+}
+
+export async function listExpenses(params?: { from?: string; to?: string; limit?: number }): Promise<{ expenses: ExpenseResponse[] }> {
+    const search = new URLSearchParams();
+    if (params?.from) search.append('from', params.from);
+    if (params?.to) search.append('to', params.to);
+    if (params?.limit) search.append('limit', params.limit.toString());
+    const path = `/v1/expenses${search.toString() ? `?${search.toString()}` : ''}`;
+    return apiRequest('GET', path);
+}
+
+// ============================================================================
+// Settings
+// ============================================================================
+
+export async function fetchSettings(): Promise<SettingsResponse> {
+    return apiRequest<SettingsResponse>('GET', '/v1/settings');
+}
+
+export async function updateSettings(payload: UpdateSettingsRequest): Promise<SettingsResponse> {
+    return apiRequest<SettingsResponse>('PATCH', '/v1/settings', payload);
 }

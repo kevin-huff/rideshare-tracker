@@ -1,8 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { StatCardProps } from '../types';
+import { useTheme, Theme } from '../theme';
 
 export function StatCard({ label, value, subtitle }: StatCardProps) {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
     return (
         <View style={styles.card}>
             <Text style={styles.label}>{label}</Text>
@@ -12,29 +16,29 @@ export function StatCard({ label, value, subtitle }: StatCardProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     card: {
-        backgroundColor: '#0B1220',
+        backgroundColor: theme.surface,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#1F2937',
+        borderColor: theme.border,
         flex: 1,
     },
     label: {
-        color: '#9CA3AF',
+        color: theme.muted,
         fontSize: 13,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 6,
     },
     value: {
-        color: '#F9FAFB',
+        color: theme.text,
         fontSize: 32,
         fontWeight: '800',
     },
     subtitle: {
-        color: '#9CA3AF',
+        color: theme.muted,
         marginTop: 6,
         fontSize: 13,
     },

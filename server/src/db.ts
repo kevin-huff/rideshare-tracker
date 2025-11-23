@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let db: Database.Database | undefined;
+let currentDbPath: string | undefined;
 
 export function getDb() {
   if (!db) {
@@ -30,6 +31,7 @@ export function initDb(customPath?: string) {
 
   const dbPath = customPath || process.env.DB_PATH || path.join(process.cwd(), 'rideshare.db');
   db = new Database(dbPath);
+  currentDbPath = dbPath;
 
   // Enable WAL mode for better concurrency
   db.pragma('journal_mode = WAL');
@@ -43,9 +45,21 @@ export function initDb(customPath?: string) {
   try {
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     db.exec(schema);
+    // Seed settings row if missing
+    db.prepare(
+      `INSERT OR IGNORE INTO settings (id, overlay_privacy_radius_m, overlay_hide_location, overlay_theme)
+       VALUES (1, 0, 0, 'midnight')`
+    ).run();
     // console.log(`Database initialized at ${dbPath}`);
   } catch (e) {
     console.error('Failed to load schema.sql', e);
     throw e;
   }
+}
+
+export function getDbPath() {
+  if (!currentDbPath) {
+    throw new Error('Database path not set');
+  }
+  return currentDbPath;
 }
